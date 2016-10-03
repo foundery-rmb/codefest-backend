@@ -14,3 +14,7 @@ router.get('/', function (req, res, next) {
     });
   });
 });
+
+router.get('/ping', function (req, res) {
+  res.send('PONG');
+});
