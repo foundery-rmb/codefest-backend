@@ -26,7 +26,20 @@ router.get('/ping', function (req, res) {
 router.get('/query/:querytext', function (req, res) {
   request(LUIS_URL + req.params.querytext, function (error, response, body) {
   if (!error && response.statusCode == 200) {
-    	res.send(body);
+		var request = dbRequest(getHighestIntent(response));    	
+    	res.send(request);
   	}
   })
 });
+
+var getHighestIntent = function(response) {
+	json_result = JSON.parse(response.body);
+	return json_result.entities[0];
+}
+
+var dbRequest = function(response) {
+	var db_request = {};
+	db_request.entity = response.entity;
+	db_request.type = response.type; 
+	return db_request;
+}
