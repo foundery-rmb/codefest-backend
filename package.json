@@ -17,7 +17,8 @@
     "request": "^2.75.0",
     "sequelize": "^3.5.1",
     "serve-favicon": "^2.3.0",
-    "sqlite3": "^3.0.5"
+    "sqlite": "^2.2.0",
+    "sqlite3": "^3.1.5"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
