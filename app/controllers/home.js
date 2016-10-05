@@ -1,6 +1,5 @@
 var express = require('express'),
-  router = express.Router(),
-  db = require('./databaseHelper.js');
+  router = express.Router(); 
 var sql = require('mssql');
 var Promise = require("bluebird");
 
