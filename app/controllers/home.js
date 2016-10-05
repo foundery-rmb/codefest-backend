@@ -1,6 +1,8 @@
 var express = require('express'),
   router = express.Router(),
-  db = require('../models');
+  db = require('./databaseHelper.js');
+var sql = require('mssql');
+var Promise = require("bluebird");
 
  var request = require('request'); 
 
@@ -15,27 +17,27 @@ module.exports = function (app) {
   });
 };
 
-router.get('/', function (req, res, next) {
-  db.Article.findAll().then(function (articles) {
-    res.render('index', {
-      title: 'Generator-Express MVC',
-      articles: articles
-    });
-  });
-});
-
 router.get('/ping', function (req, res) {
   res.send('PONG');
 });
 
 router.get('/query/:querytext', function (req, res) {
-  request(LUIS_URL + req.params.querytext, function (error, response, body) {
-  if (!error && response.statusCode == 200) {
-		var request = dbRequest(getHighestIntent(response));    	
-    	res.send(request);
-  	}
-  })
+  getCorporateProfile().then(function(response){
+		res.send(response);	
+	});
+  // request(LUIS_URL + req.params.querytext, function (error, response, body) {
+  // if (!error && response.statusCode == 200) {
+		// var request = dbRequest(getHighestIntent(response));    	
+  //   	res.send(request);
+  // 	}
+  // })
 });
+
+router.get('/dbtest', function(req, res, next) {
+	getCorporateProfile().then(function(response){
+		res.send(response);	
+	});
+})
 
 var getHighestIntent = function(response) {
 	json_result = JSON.parse(response.body);
@@ -48,3 +50,37 @@ var dbRequest = function(response) {
 	db_request.type = response.type; 
 	return db_request;
 }
+
+var getCorporateProfile = function () {
+		
+		var SQL = 'select distinct  TOP 10 Client, Category, FSP_number, Reg_number, ' +
+		'Risk_profile_client, Legal_persona_client, Legal_persona_fund, count(Fund_name) as Fund_count ' +
+		'from FUND_DATA ' +
+		//'where Client like '\%Allan Gray\%' and Legal_persona_fund != '' ' +
+		'group by Client, Category, FSP_number, Reg_number, Risk_profile_client, Legal_persona_client, Legal_persona_fund ' +
+		'order by count(Fund_name) DESC'
+
+		var result = {};
+		var config = {
+    		user: 'foudnery@foundery-codefest', 
+    		password: 'F0und3ry',
+    		server: 'foundery-codefest.database.windows.net',
+    		database: 'codefest2016',
+    		options: {
+        		encrypt: true 
+    		}
+		};
+		
+		return new Promise(function(resolve) {
+			sql.connect(config, function (err) {
+	    		if(err) { console.log(err); }
+	    		new sql.Request().query(SQL)
+	    		.then(function(recordset) {
+	    			resolve(recordset); 		
+	    		}).catch(function(err) {
+	      			console.log(err);
+	    		 });
+			});
+		});
+
+	};

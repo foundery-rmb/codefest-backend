@@ -9,8 +9,8 @@ var config = {
       name: 'codefestbackend'
     },
     port: process.env.PORT || 3000,
-    db: 'sqlite://localhost/codefestbackend-development',
-    storage: rootPath + '/data/codefestbackend-development'
+    db: 'sqlite://localhost/codefest-backend',
+    storage: rootPath + '/data/codefest-backend'
   },
 
   test: {
