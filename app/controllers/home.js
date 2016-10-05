@@ -21,27 +21,50 @@ router.get('/ping', function (req, res) {
 });
 
 router.get('/query/:querytext', function (req, res) {
-  getCorporateProfile().then(function(response){
-		res.send(response);	
-	});
-  // request(LUIS_URL + req.params.querytext, function (error, response, body) {
-  // if (!error && response.statusCode == 200) {
-		// var request = dbRequest(getHighestIntent(response));    	
-  //   	res.send(request);
-  // 	}
-  // })
+ //  customerData('Allan Gray').then(function(response){
+	// 	res.send(response);	
+	// });
+
+  request(LUIS_URL + req.params.querytext, function (error, response, body) {
+  if (!error && response.statusCode == 200) {
+		//var request = dbRequest(getHighestIntent(response)); 
+		var queryResponse = {};
+		queryResponse.intent = getIntents(body);  
+		queryResponse.entities = getEntities(body); 
+
+    	res.send(queryResponse);
+  	}
+  });
 });
 
 router.get('/dbtest', function(req, res, next) {
-	getCorporateProfile().then(function(response){
-		res.send(response);	
+	var customer = getHighestIntent();
+	var result = {}; 
+	customerData('Allan Gray').then(function(response){
+		result.client = response;
+		return result;
+	}).then(function(response2){
+		return fundData('Allan Gray')
+	}).then(function(res2){
+		response2.funds = res2;
+		return response2;
+	}).then(function(result){
+		res.send(result);
 	});
-})
+});
 
-var getHighestIntent = function(response) {
-	json_result = JSON.parse(response.body);
-	return json_result.entities[0];
+var getEntities = function(response) {
+	json_result = JSON.parse(response);
+	return json_result.entities;
 }
+
+var getIntents = function(response) {
+	json_result = JSON.parse(response);
+	return json_result.intents[0];
+}
+
+
+
 
 var dbRequest = function(response) {
 	var db_request = {};
@@ -50,16 +73,16 @@ var dbRequest = function(response) {
 	return db_request;
 }
 
-var getCorporateProfile = function () {
-		
-		var SQL = 'select distinct  TOP 10 Client, Category, FSP_number, Reg_number, ' +
-		'Risk_profile_client, Legal_persona_client, Legal_persona_fund, count(Fund_name) as Fund_count ' +
-		'from FUND_DATA ' +
-		//'where Client like '\%Allan Gray\%' and Legal_persona_fund != '' ' +
-		'group by Client, Category, FSP_number, Reg_number, Risk_profile_client, Legal_persona_client, Legal_persona_fund ' +
-		'order by count(Fund_name) DESC'
 
-		var result = {};
+
+var customerData = function (customer) {
+		
+		var SQL_CP_Distinct = 'SELECT DISTINCT Client, Category, FSP_number, Reg_number, ' +
+							  'Risk_profile_client, Legal_persona_client ' +
+							  'FROM FUND_DATA ' +
+		                      'WHERE (Client like \'' + customer + '%\')'
+		
+		
 		var config = {
     		user: 'foudnery@foundery-codefest', 
     		password: 'F0und3ry',
@@ -69,17 +92,49 @@ var getCorporateProfile = function () {
         		encrypt: true 
     		}
 		};
-		
+
 		return new Promise(function(resolve) {
 			sql.connect(config, function (err) {
 	    		if(err) { console.log(err); }
-	    		new sql.Request().query(SQL)
+	    
+	    		new sql.Request().query(SQL_CP_Distinct)
 	    		.then(function(recordset) {
 	    			resolve(recordset); 		
 	    		}).catch(function(err) {
 	      			console.log(err);
 	    		 });
+	
 			});
+		
 		});
 
 	};
+
+var fundData = function (customer) {
+	
+	var SQL_FUNDS = 'SELECT DISTINCT Client, Legal_persona_fund, Fund_name, Reg_number_fund ' +  
+						'FROM dbo.FUND_DATA ' + 
+						'WHERE (Client like \'' + customer + '%\')';
+
+		var config = {
+    		user: 'foudnery@foundery-codefest', 
+    		password: 'F0und3ry',
+    		server: 'foundery-codefest.database.windows.net',
+    		database: 'codefest2016',
+    		options: {
+        		encrypt: true 
+    		}
+		};
+
+	return new Promise(function(resolve) {					
+		sql.connect(config, function (err) {
+	    	if(err) { console.log(err); }
+			new sql.Request().query(SQL_FUNDS)
+	    		.then(function(recordset) {
+	    			resolve(recordset); 		
+	    		}).catch(function(err) {
+	      			console.log(err);
+	    	});
+		});
+	});
+};	
