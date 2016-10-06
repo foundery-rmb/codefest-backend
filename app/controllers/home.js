@@ -2,6 +2,7 @@ var express = require('express'),
   router = express.Router(); 
 var sql = require('mssql');
 var Promise = require("bluebird");
+var changeCase = require('change-case');
 
  var request = require('request'); 
 
@@ -21,39 +22,54 @@ router.get('/ping', function (req, res) {
 });
 
 router.get('/query/:querytext', function (req, res) {
- //  customerData('Allan Gray').then(function(response){
-	// 	res.send(response);	
-	// });
 
   request(LUIS_URL + req.params.querytext, function (error, response, body) {
   if (!error && response.statusCode == 200) {
-		//var request = dbRequest(getHighestIntent(response)); 
+		var request = dbRequest(getQueryEntity(body)); 
+		console.log(changeCase.titleCase(request.entity));
+		var result = {};
 		var queryResponse = {};
 		queryResponse.intent = getIntents(body);  
-		queryResponse.entities = getEntities(body); 
-
-    	res.send(queryResponse);
-  	}
+		queryResponse.entities = getEntitiesList(body); 
+		result.queryResponse = queryResponse;
+		customerData(changeCase.titleCase(request.entity)).then(function(response) {
+			result.client = response;
+			return result;
+		}).then(function(customerData) {
+			return fundData(changeCase.titleCase(request.entity)).then(function(fundData) {
+				result.funds = fundData;
+				return result;
+			});
+		}).then(function(result) {
+			res.send(result);
+		}); 
+	}
   });
 });
 
+//Test method
 router.get('/dbtest', function(req, res, next) {
-	var customer = getHighestIntent();
+	//var customer = getQueryEntity();
 	var result = {}; 
 	customerData('Allan Gray').then(function(response){
 		result.client = response;
 		return result;
-	}).then(function(response2){
-		return fundData('Allan Gray')
-	}).then(function(res2){
-		response2.funds = res2;
-		return response2;
+	}).then(function(customerData){
+		return fundData('Allan Gray').then(function(fundData){
+			result.funds = fundData;
+			return result;
+		});
 	}).then(function(result){
 		res.send(result);
 	});
 });
 
-var getEntities = function(response) {
+var getQueryEntity = function(response) {
+	json_result = JSON.parse(response);
+	return json_result.entities[0];
+}
+
+var getEntitiesList = function(response) {
 	json_result = JSON.parse(response);
 	return json_result.entities;
 }
@@ -63,17 +79,12 @@ var getIntents = function(response) {
 	return json_result.intents[0];
 }
 
-
-
-
 var dbRequest = function(response) {
 	var db_request = {};
 	db_request.entity = response.entity;
 	db_request.type = response.type; 
 	return db_request;
 }
-
-
 
 var customerData = function (customer) {
 		
@@ -113,8 +124,8 @@ var customerData = function (customer) {
 var fundData = function (customer) {
 	
 	var SQL_FUNDS = 'SELECT DISTINCT Client, Legal_persona_fund, Fund_name, Reg_number_fund ' +  
-						'FROM dbo.FUND_DATA ' + 
-						'WHERE (Client like \'' + customer + '%\')';
+					'FROM dbo.FUND_DATA ' + 
+					'WHERE (Client like \'' + customer + '%\')';
 
 		var config = {
     		user: 'foudnery@foundery-codefest', 
