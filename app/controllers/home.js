@@ -40,7 +40,7 @@ router.get('/query/:querytext', function (req, res) {
 			return result;
 		}).then(function(customerData) {
 			return fundData(customerEntity).then(function(fundData) {
-				if(result.clients > 0){
+				if(result.clients.length > 0){
 					result.clients[0].funds = fundData;
 					return result;
 				}
