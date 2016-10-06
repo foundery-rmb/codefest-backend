@@ -26,18 +26,19 @@ router.get('/query/:querytext', function (req, res) {
   request(LUIS_URL + req.params.querytext, function (error, response, body) {
   if (!error && response.statusCode == 200) {
 		var request = dbRequest(getQueryEntity(body)); 
-		console.log(changeCase.titleCase(request.entity));
+		var customerEntity = changeCase.titleCase(request.entity);
 		var result = {};
 		var queryResponse = {};
 		queryResponse.intent = getIntents(body);  
 		queryResponse.entities = getEntitiesList(body); 
 		result.queryResponse = queryResponse;
-		customerData(changeCase.titleCase(request.entity)).then(function(response) {
-			result.client = response;
+		customerData(customerEntity).then(function(response) {
+			result.clients = response;
 			return result;
 		}).then(function(customerData) {
-			return fundData(changeCase.titleCase(request.entity)).then(function(fundData) {
-				result.funds = fundData;
+			return fundData(customerEntity).then(function(fundData) {
+				console.log(result);
+				result.clients[0].funds = fundData;
 				return result;
 			});
 		}).then(function(result) {
@@ -80,9 +81,13 @@ var getIntents = function(response) {
 }
 
 var dbRequest = function(response) {
+	console.log(response);
 	var db_request = {};
-	db_request.entity = response.entity;
-	db_request.type = response.type; 
+	if(response !== undefined)
+	{
+		db_request.entity = response.entity;
+		db_request.type = response.type; 
+	}
 	return db_request;
 }
 
@@ -123,7 +128,7 @@ var customerData = function (customer) {
 
 var fundData = function (customer) {
 	
-	var SQL_FUNDS = 'SELECT DISTINCT Client, Legal_persona_fund, Fund_name, Reg_number_fund ' +  
+	var SQL_FUNDS = 'SELECT DISTINCT Legal_persona_fund, Fund_name, Reg_number_fund ' +  
 					'FROM dbo.FUND_DATA ' + 
 					'WHERE (Client like \'' + customer + '%\')';
 
