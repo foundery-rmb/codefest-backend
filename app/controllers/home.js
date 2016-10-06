@@ -26,20 +26,19 @@ router.get('/query/:querytext', function (req, res) {
   request(LUIS_URL + req.params.querytext, function (error, response, body) {
   if (!error && response.statusCode == 200) {
 		var request = dbRequest(getQueryEntity(body)); 
-		var customerEntity = changeCase.titleCase(request.entity);
 		var result = {};
 		var queryResponse = {};
 		queryResponse.intent = getIntents(body);  
 		queryResponse.entities = getEntitiesList(body); 
 		result.queryResponse = queryResponse;
-		customerData(customerEntity).then(function(response) {
+		customerData(request.capitalized).then(function(response) {
 			if(response !== undefined){
 				result.clients = response;
 				return result;
 			}
 			return result;
 		}).then(function(customerData) {
-			return fundData(customerEntity).then(function(fundData) {
+			return fundData(request.capitalized).then(function(fundData) {
 				if(result.clients.length > 0){
 					result.clients[0].funds = fundData;
 					return result;
@@ -72,7 +71,11 @@ router.get('/dbtest', function(req, res, next) {
 
 var getQueryEntity = function(response) {
 	json_result = JSON.parse(response);
-	return json_result.entities[0];
+	console.log(json_result.intents[0].score);
+	if ( json_result.intents[0].score > 0.90 ) {
+		return json_result.entities[0]; 
+	} 
+	return undefined;
 }
 
 var getEntitiesList = function(response) {
@@ -86,12 +89,12 @@ var getIntents = function(response) {
 }
 
 var dbRequest = function(response) {
-	console.log(response);
 	var db_request = {};
 	if(response !== undefined)
 	{
 		db_request.entity = response.entity;
 		db_request.type = response.type; 
+		db_request.capitalized = changeCase.titleCase(response.entity);
 	}
 	return db_request;
 }
