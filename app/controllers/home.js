@@ -33,12 +33,17 @@ router.get('/query/:querytext', function (req, res) {
 		queryResponse.entities = getEntitiesList(body); 
 		result.queryResponse = queryResponse;
 		customerData(customerEntity).then(function(response) {
-			result.clients = response;
+			if(response !== undefined){
+				result.clients = response;
+				return result;
+			}
 			return result;
 		}).then(function(customerData) {
 			return fundData(customerEntity).then(function(fundData) {
-				console.log(result);
-				result.clients[0].funds = fundData;
+				if(result.clients > 0){
+					result.clients[0].funds = fundData;
+					return result;
+				}
 				return result;
 			});
 		}).then(function(result) {
